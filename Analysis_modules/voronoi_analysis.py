@@ -87,11 +87,11 @@ class Voronoi_analysis(AnalysisBase):
         Box_Freud=freud.box.Box.square(self.universe.dimensions[0])
         
         if self.Upper_PMB1s_sel!=None:
-                PMB1s_upper=u.select_atoms(Upper_PMB1s_sel)
+                PMB1s_upper=self.universe.select_atoms(self.Upper_PMB1s_sel)
                 self.PMB1_upper_coords.append(PMB1s_upper.positions)
         
         if self.Lower_PMB1s_sel!=None:
-                PMB1s_lower=u.select_atoms(Lower_PMB1s_sel)
+                PMB1s_lower=self.universe.select_atoms(self.Lower_PMB1s_sel)
                 self.PMB1_lower_coords.append(PMB1s_lower.positions)
         
         if self.Protein_sel!=None:

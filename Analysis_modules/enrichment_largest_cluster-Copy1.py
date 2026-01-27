@@ -1,8 +1,12 @@
 import pathlib
+import pickle
+
 import numpy as np
 import pandas as pd
+
 import MDAnalysis as mda
 from MDAnalysis.analysis.leaflet import LeafletFinder
+
 from lipyphilic.lib.assign_leaflets import AssignLeaflets
 from lipyphilic.lib.neighbours import Neighbours
 
@@ -18,7 +22,7 @@ class Enrichment_largest_cluster:
         self.stop=stop
         self.step=step
         self.verbose=verbose
-        self.universe=mda.Universe(tpr,traj,continuous=True)
+        self.universe=mda.Universe(tpr,traj)
         self.savingfolder=saving_folder
 
 

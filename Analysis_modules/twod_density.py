@@ -8,20 +8,18 @@ import pickle
 
 class TwoD_density():
     
-    def __init__(self,tpr,traj,save_suffix,saving_folder,step,xdim,zdim,start=0,stop=-1,verbose=True,sel=None,selname=None,update=False):
+    def __init__(self,tpr,traj,step,xdim,zdim,start=0,stop=-1,verbose=True,sel=None,selname=None,update=False):
         self.tpr=tpr
         self.traj=traj
         self.start=start
         self.stop=stop
         self.step=step
-        self.universe=mda.Universe(tpr,traj)
+        self.universe=mda.Universe(tpr,traj,continuous=True)
         self.xdim=xdim
         self.ydim=xdim
         self.zdim=zdim
-        self.savesuffix=save_suffix
         self.COM=np.array([xdim/2,xdim/2,zdim/2])
         self.verbose=verbose
-        self.savingfolder=saving_folder
         self.sel=sel
         self.selname=selname
         self.update=update
@@ -30,8 +28,8 @@ class TwoD_density():
     def densities(self):
         Selection=self.universe.select_atoms(self.sel,updating=self.update)
         
-        workflow=[trans.unwrap(self.universe.atoms),trans.wrap(self.universe.atoms,compound='fragments')]
-        self.universe.trajectory.add_transformations(*workflow)
+        #workflow=[trans.unwrap(self.universe.atoms),trans.wrap(self.universe.atoms,compound='fragments')]
+        #self.universe.trajectory.add_transformations(*workflow)
         
         dens=density.DensityAnalysis(Selection,delta=1.0,xdim=self.xdim,ydim=self.ydim,zdim=self.zdim,
                                         gridcenter=self.COM)
@@ -39,13 +37,7 @@ class TwoD_density():
         
         grid=dens.results.density.grid        
         avg=grid.mean(axis=-1)
-                
-            
-        filename=self.savingfolder+self.selname+"_"+self.savesuffix
-        outfile=open(filename,'wb')
-        pickle.dump(avg,outfile)
-        outfile.close()
-            
+                            
         return avg
         
 

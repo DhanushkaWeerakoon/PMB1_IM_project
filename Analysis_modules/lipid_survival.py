@@ -6,8 +6,6 @@ from MDAnalysis.core.groups import Atom, AtomGroup
 import argparse
 from numba import jit
 
-# coding=utf-8
-
 
 #tqdm - module to make loops show a progress metre. Just use as follows:
 #from tqdm import tqdm 
@@ -123,7 +121,8 @@ class Lipid_survival():
         self.universe.trajectory[0]
         
         lifetimes_per_resid={}
-        
+
+        # Create a dictionary with empty frames for each lipid residue
         lipid_frame_contacts=dict([(resid,np.zeros(len(self.universe.trajectory[self.start:self.stop:self.step]))) for resid in lipids.residues.resids])
         
         for i, frame in enumerate(tqdm.tqdm(self.universe.trajectory[self.start:self.stop:self.step])):
@@ -132,23 +131,28 @@ class Lipid_survival():
             lipids_near=tree.search(protein,self.proximity,level='R')
             resids_on=[lipid.resid for lipid in lipids_near]
     
-    #Make lipids_on_prev if it doesn't exist - then add timepoints to resids_on
+    # If lipids_on_prev does not exist, set it equal to resids_on 
             if not lipids_on_prev:
                 lipids_on_prev = resids_on
+                # Set time_on for resids in resid_on to dt 
                 for resid in resids_on:
                     time_on[resid] = dt
                 continue
 
+            # If lipids_on_prev does exist - execute this code
             for resid in resids_on:
-        #Increase count for each frame
+                #Increase count for each frame
                 lipid_frame_contacts[resid][i] += 1
-        # If lipid was present previously, state it is present in next frame
+                # If lipid was present previously, state it is present in next frame
                 if resid in lipids_on_prev:
                     time_on[resid] += dt
+                # If lipid was not present previously, set time_on for resid to dt
                 else:
                     time_on[resid] = dt
-    
+
+            # Go through resids in lipids_on_prev
             for resid in lipids_on_prev:
+                # If the resid is not in resids_on i.e. if it is not present in the current timestep, append it to lifetimes_per_resid - that's why we have multiple values per residue as opposed to just one
                 if resid not in resids_on:
                     try:
                         lifetimes_per_resid[resid].append(time_on[resid])
@@ -156,10 +160,13 @@ class Lipid_survival():
                     except KeyError:
                         lifetimes_per_resid[resid] = [time_on[resid]]
                     finally:
+                        # Delete resid from time_on 
                         del time_on[resid]
+            # Set resids_on to lipids_on_prev for next step
             lipids_on_prev = resids_on
             
-            
+        self.time_on=lifetimes_per_resid   
+        print(time_on)
         for resid in time_on:
             try:
                 lifetimes_per_resid[resid].append(time_on[resid])
@@ -186,6 +193,7 @@ class Lipid_survival():
     def Write_files(self,survival_rates,lifetimes):
         PMB1_id_change=self.PMB1_id.replace(":","_")
         for resname in survival_rates:
+            
             with open(f"{self.savingfolder}lifetime_{self.lipid_select}_{self.protein_select}_{PMB1_id_change}_survival.dat", "w") as out:
                 template = "{0:^6d}{1:^8.3e}"
                 
@@ -197,7 +205,7 @@ class Lipid_survival():
                 except ZeroDivisionError:
                     prob = 0.
                 #print(template.format(dt, prob))
-                print(template.format(dt, prob), file=out)
+                    print(template.format(dt, prob), file=out)
     
         with open(f"{self.savingfolder}lifetime_{self.lipid_select}_{self.protein_select}_{PMB1_id_change}_summary.dat", "w") as out:
             for resname, times in lifetimes.items():
