@@ -124,6 +124,8 @@ class COM(AnalysisBase):
     identification for membrane systems and filtering by z-coordinate to
     select molecules in specific leaflets. Uses NoJump transformation to
     handle molecule periodic boundary crossings.
+
+    Inherits from the MDAnalysis.AnalysisBase class.
     
     Parameters
     ----------
