@@ -1,9 +1,5 @@
-Scripts used for analysis of MD data generated from simulations of inner membrane models in presence/absence of polymyxin B1. 
+Scripts that I used to analyse MD data from inner membrane model simulations.
 - Analyses used for all-atom systems,
 - Analyses used for coarse-grained systems,
 - Analyses used for electroporation studies (coarse-grained systems),
 - Analyses used for both coarse-grained and all-atom systems.
-
-References
-- PhD thesis: https://eprints.soton.ac.uk/506522/,
-- Publication: https://www.jbc.org/article/S0021-9258(24)02255-5/fulltext.
