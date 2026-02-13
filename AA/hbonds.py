@@ -1,8 +1,6 @@
 """
 Module for calculating intermolecular hydrogen bonds between two entities. Uses MDAnalysis HydrogenBondsAnalysis class.
 """
-list1=[[3,4],[5,6],[7,8]]
-print(np.shape(np.array(list1)))
 
 import pickle
 import numpy as np
@@ -13,7 +11,7 @@ from MDAnalysis.analysis.hydrogenbonds import HydrogenBondAnalysis
 def fit_exponential(tau_timeseries: list or np.ndarray, 
                     ac_timeseries: list or np.ndarray,
                     intermittent: int =0,
-                    parameters: list or None =None) -> nd.array, nd.array, nd.array, nd.array:
+                    parameters: list or None =None):
     """
     Fit exponential decay model to the hydrogen bond time autocorrelation function.
         
@@ -236,7 +234,8 @@ class Hbonds_calculation():
         self.hbonds_type=hbonds_container.count_by_type()
         
     # Fix this next - run in Jupyter as well to see if it works.
-    def lifetime_calc(self,window,tau_max,parameters,intermittent=0):
+    def lifetime_calc(self,window: int, tau_max: int, parameters: list,
+                      intermittent: int = 0):
 
         """
         Calculate hydrogen bond lifetimes and fit exponential decay.
@@ -247,21 +246,14 @@ class Hbonds_calculation():
             Window step size for lifetime calculation.
         tau_max : int
             Maximum tau value (in frames) for lifetime calculation.
-        parameters : array-like
+        parameters : list
             Initial parameters for exponential fit.
         intermittent : int, default=0
             Maximum number of frames for which a hydrogen bond is allowed to break.
             
-        Sets Attributes
+        Sets class attributes
         ---------------
-        intermittent : int
-            Stored intermittency parameter.
-        lifetime_window : int
-            Stored window parameter.
-        lifetime_tau_max : int
-            Stored tau_max parameter.
-        parameters : array-like
-            Stored initial fit parameters.
+        All parameters.
         params : array
             Fitted exponential parameters.
         fit_t : array
@@ -283,8 +275,13 @@ class Hbonds_calculation():
         self.lifetime_tau_max=tau_max
         self.parameters=parameters
         
+        # Work out hydrogen bond lifetimes
         tau_frames, hbond_lifetimes=self.hbonds_results.lifetime(tau_max=self.lifetime_tau_max,window_step=self.lifetime_window,intermittency=self.intermittent)
+        
+        # Fit exponential decay function to the hydrogen bond lifetimes
         params, fit_t, fit_ac=fit_exponential(tau_frames, hbond_lifetimes, intermittent=self.intermittent,parameters=self.parameters)
+        
+        # Return fitted parameters, fitted curve variables and hydrogen bond lifetime variables.
         self.params=params
         self.fit_t=fit_t
         self.fit_ac=fit_ac
