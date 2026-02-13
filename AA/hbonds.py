@@ -10,7 +10,7 @@ from MDAnalysis.analysis.hydrogenbonds import HydrogenBondAnalysis
     
 def fit_exponential(tau_timeseries: list or np.ndarray, 
                     ac_timeseries: list or np.ndarray,
-                    intermittent: int =0,
+                    intermittency: int =0,
                     parameters: list or None =None):
     """
     Fit exponential decay model to the hydrogen bond time autocorrelation function.
@@ -23,10 +23,10 @@ def fit_exponential(tau_timeseries: list or np.ndarray,
         Time lag values for the autocorrelation function.
     ac_timeseries : array-like
         Autocorrelation values corresponding to tau_timeseries.
-    intermittent : int, default = 0, optional
+    intermittency : int, default = 0, optional
         Maximum number of frames for which a hydrogen bond is allowed to break while being considered continuous.
-        If intermittent = 0, data will be fitted to a double exponential: A*exp(-t/tau1) + B*exp(-t/tau2).
-        If intermittent > 0, data will be fitted to a triple exponential: A*exp(-t/tau1) + B*exp(-t/tau2) + C*exp(-t/tau3).
+        If intermittency = 0, data will be fitted to a double exponential: A*exp(-t/tau1) + B*exp(-t/tau2).
+        If intermittency > 0, data will be fitted to a triple exponential: A*exp(-t/tau1) + B*exp(-t/tau2) + C*exp(-t/tau3).
     parameters : list, default = None, optional
         Initial guess parameters for curve fitting. Recommended for better convergence. Should be in the form:
         For double exponential: [A, tau1, B, tau2].
@@ -55,12 +55,12 @@ def fit_exponential(tau_timeseries: list or np.ndarray,
     if len(tau_timeseries) < 4:
         raise ValueError("Need at least 4 data points for fitting")
     
-    if (type(intermittent) != int) or (intermittent < 0):
-        raise ValueError("Intermittent parameter must be a non-negative integer.")  
+    if (type(intermittency) != int) or (intermittency < 0):
+        raise ValueError("intermittency parameter must be a non-negative integer.")  
     
-    # Run curve fitting based on intermittent parameter
+    # Run curve fitting based on intermittency parameter
 
-    if intermittent == 0:
+    if intermittency == 0:
         def model (t, A, tau1, B, tau2):
             return np.array((A*np.exp(-t/tau1) + B*np.exp(-t/tau2)))
         
@@ -69,7 +69,7 @@ def fit_exponential(tau_timeseries: list or np.ndarray,
 
         else:
             if len(parameters) !=4:
-                raise ValueError("For intermittent=0, parameters should be None or a list of 4 initial guess values: [A, tau1, B, tau2].")
+                raise ValueError("For intermittency=0, parameters should be None or a list of 4 initial guess values: [A, tau1, B, tau2].")
         
             else:
                 params,param_covariance=curve_fit(model, tau_timeseries, ac_timeseries, parameters)
@@ -83,7 +83,7 @@ def fit_exponential(tau_timeseries: list or np.ndarray,
 
         else:
             if len(parameters) !=6:
-                raise ValueError("For intermittent>0, parameters should be None or a list of 6 initial guess values: [A, tau1, B, tau2, C, tau3].")
+                raise ValueError("For intermittency>0, parameters should be None or a list of 6 initial guess values: [A, tau1, B, tau2, C, tau3].")
         
             else:
                 params,param_covariance=curve_fit(model, tau_timeseries, ac_timeseries, parameters)
@@ -233,59 +233,83 @@ class Hbonds_calculation():
         self.hbonds_timeseries=hbonds_container.count_by_time()
         self.hbonds_type=hbonds_container.count_by_type()
         
-    # Fix this next - run in Jupyter as well to see if it works.
-    def lifetime_calc(self,window: int, tau_max: int, parameters: list,
-                      intermittent: int = 0):
+    def lifetime_calc(self, window: int, tau_max: int, intermittency: int=0):
 
         """
-        Calculate hydrogen bond lifetimes and fit exponential decay.
+        Calculates time autocorrelation function of intermolecular hydrogen bond 
+        (hydrogen bond lifetimes). Requires .calculation() method to be run 
+        first to compute hydrogen bonds over trajectory.
         
         Parameters
         ----------
         window : int
-            Window step size for lifetime calculation.
-        tau_max : int
-            Maximum tau value (in frames) for lifetime calculation.
-        parameters : list
-            Initial parameters for exponential fit.
-        intermittent : int, default=0
-            Maximum number of frames for which a hydrogen bond is allowed to break.
+            The number of frames between each t(0).
+        tau_max: int
+            The maximum time lag (in frames) for which to calculate the 
+            autocorrelation function.
+        intermittency : int, default=0
+        Maximum number of frames for which a hydrogen bond is allowed to break while 
+        being considered continuous.
+       
+            
+        Sets class attributes
+        ---------------
+        All parameters.
+        tau_frames : array
+            Time lag values from lifetime analysis.
+        hbond_lifetimes : array
+            Hydrogen bond lifetime values from lifetime analysis.
+        """
+        
+        self.lifetime_window=window
+        self.lifetime_tau_max=tau_max
+        self.intermittency=intermittency
+        
+        # Work out hydrogen bond lifetimes
+        tau_frames, hbond_lifetimes=self.hbonds_results.lifetime(tau_max=self.lifetime_tau_max,window_step=self.lifetime_window,intermittency=self.intermittency)
+        
+        # Return hydrogen bond lifetime variables.
+        self.tau_frames=tau_frames
+        self.hbond_lifetimes=hbond_lifetimes
+    
+    def lifetime_fit(self, parameters: list or None = None):
+        """Fits exponential function to hydrogen bond time autocorrelation (lifetimes)
+        data. Requires .calculation() and lifetime_calc() methods to be run.
+        
+         Parameters
+        -----------
+
+        parameters : list, default = None, optional
+        Initial guess parameters for curve fitting. Recommended for better convergence. 
+        Should be in the form:
+        - For double exponential: [A, tau1, B, tau2].
+        - For triple exponential: [A, tau1, B, tau2, C, tau3].
+        If parameters is set to None, initial parameters will be [1,1,1,1] for 
+        double exponential and [1,1,1,1,1,1] for triple exponential.
             
         Sets class attributes
         ---------------
         All parameters.
         params : array
             Fitted exponential parameters.
+        params_cov : array
+            Covariance of fitted parameters.
         fit_t : array
             Time values for fitted curve.
         fit_ac : array
             Fitted autocorrelation values.
-        tau_frames : array
-            Time lag values from lifetime analysis.
-        hbond_lifetimes : array
-            Autocorrelation values from lifetime analysis.
-            
-        Notes
-        -----
-        Must call calculation() before calling this method.
         """
-        
-        self.intermittent=intermittent
-        self.lifetime_window=window
-        self.lifetime_tau_max=tau_max
-        self.parameters=parameters
-        
-        # Work out hydrogen bond lifetimes
-        tau_frames, hbond_lifetimes=self.hbonds_results.lifetime(tau_max=self.lifetime_tau_max,window_step=self.lifetime_window,intermittency=self.intermittent)
-        
+
+        self.init_parameters=parameters
+
         # Fit exponential decay function to the hydrogen bond lifetimes
-        params, fit_t, fit_ac=fit_exponential(tau_frames, hbond_lifetimes, intermittent=self.intermittent,parameters=self.parameters)
-        
-        # Return fitted parameters, fitted curve variables and hydrogen bond lifetime variables.
-        self.params=params
+        fit_params, params_cov, fit_t, fit_ac = fit_exponential(tau_timeseries=self.tau_frames,
+                                                ac_timeseries=self.hbond_lifetimes,
+                                                intermittency=self.intermittency,
+                                                parameters=self.init_parameters)
+
+        # Return fitted parameters and fitted curve variables.
+        self.fit_params=fit_params
         self.fit_t=fit_t
         self.fit_ac=fit_ac
-        self.tau_frames=tau_frames
-        self.hbond_lifetimes=hbond_lifetimes
-        
-
+        self.params_cov=params_cov
